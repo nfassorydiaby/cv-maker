@@ -38,3 +38,12 @@ jobs:
 
       - name: Build
         run: pnpm run build
+
+      - name: Run the server
+        run: |
+              pnpm run preview &
+              sleep 5
+#        Attention les actions qui bloquent le terminal vont bloquer le build
+      - name: Test with curl
+        run: |
+              curl -I http://localhost:4173
