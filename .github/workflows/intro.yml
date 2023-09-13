@@ -3,6 +3,10 @@ name: Intro to ci
 #Moment du déclencheur
 on:
   push:
+    paths-ignore:
+      - '**.pdf'
+      - '**.mhtml'
+#      la double etoile effectue une recherche recurssive
 
 env:
   NAME: john
@@ -50,6 +54,61 @@ jobs:
       - name: Test with curl
         run: |
               curl -I http://localhost:4173
+
+
+  snapchot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2.4.0
+        with:
+          version: 8
+          run_install: false
+
+      #Définir le store de pnpm
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - uses: actions/cache@v3
+        name: Setup pnpm cache
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Run the server
+        run: |
+          pnpm run preview &
+          sleep 5
+      #        Attention les actions qui bloquent le terminal vont bloquer le build
+      - name: Test with curl
+        run: |
+          curl -I http://localhost:4173
+  
+      
+  
+      - name: Meke the snapshot
+        run: |
+              mkdir gen
+          docker run -i --init --cap-add=SYS_ADMIN -v ./gen:/home/pptruser/gen --network host ghcr.io/puppeteer/puppeteer:latest node -e "$(cat snapshot.js)" http://localhost:4173 ./gen
+      - name: Push to git
+        run: |
+          git add static
+          git commit -m "update snapshot ${{ github.sha }}
+          git push
+  
 
   deploy:
     runs-on: ubuntu-latest
