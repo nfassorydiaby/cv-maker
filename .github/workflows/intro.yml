@@ -96,9 +96,6 @@ jobs:
       - name: Test with curl
         run: |
           curl -I http://localhost:4173
-  
-      
-  
       - name: Meke the snapshot
         run: |
               mkdir gen
